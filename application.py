@@ -8,8 +8,6 @@ import azure.cosmos.cosmos_client as cosmos_client
 import azure.cosmos.errors as errors
 import azure.cosmos.http_constants as http_constants
 import os
-import azure.cosmos.cosmos_client as cosmos_client
-import azure.cosmos.errors as errors
 import pandas as pd
 from azure.storage.blob import BlobServiceClient
 
@@ -52,7 +50,8 @@ app.layout = html.Div(children=[
             multiple=True,
         ),
         html.Div(id='placeholder'),
-        html.Table(id='live-update-table'),
+        html.Div(id='live-update-table'),
+        html.Div(id='live-update-details'),
         dcc.Interval(
                 id='interval-component',
                 interval=1*1000, # in milliseconds
@@ -119,23 +118,39 @@ def update_output(uploaded_filenames, uploaded_file_contents):
     else:
         return [html.Li("ok")]
 
-@app.callback(Output('live-update-table', 'children'),
+@app.callback([Output('live-update-table', 'children'),Output('live-update-details', 'children'),],
               [Input('interval-component', 'n_intervals')])
 def update_metrics(n):
     df=pd.DataFrame(client.QueryItems("dbs/" + database_id + "/colls/" + container_id,'SELECT * FROM c'))
-    details=df.details
+    
+    details=[]
+    for d in df.details.tolist():
+        details.extend(d)
+    details=pd.DataFrame(details)
+    #print(details)
     df=df.drop(['details','_rid','_self','_etag','_attachments','_ts','id'],1)
     max_rows=20
-    return html.Table([
+    invoices= html.Table([
         html.Thead(
             html.Tr([html.Th(col) for col in df.columns])
         ),
         html.Tbody([
             html.Tr([
                 html.Td(df.iloc[i][col]) for col in df.columns
-            ]) for i in range(min(len(df), max_rows))
+            ]) for i in range(len(df))
         ])
     ])
+    det=html.Table([
+            html.Thead(
+                html.Tr([html.Th(col) for col in details.columns])
+            ),
+            html.Tbody([
+                html.Tr([
+                    html.Td(details.iloc[i][col]) for col in details.columns
+                ]) for i in range(len(details))
+            ])
+    ])
+    return invoices,det
 
 if __name__ == '__main__':
     application.run(debug=True, host='0.0.0.0', port='80')

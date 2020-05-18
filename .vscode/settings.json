@@ -1,3 +1,4 @@
 {
-    "python.pythonPath": "/Users/anthony/dev/dash-azure/.env/bin/python3.8"
+    "python.pythonPath": "/Users/anthony/dev/dash-azure/.env/bin/python3.8",
+    "git.ignoreLimitWarning": true
 }
