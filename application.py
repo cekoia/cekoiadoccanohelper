@@ -31,7 +31,7 @@ app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 application = app.server
 
 app.layout = html.Div(children=[
-    html.H4(children='Invoices loaded'),
+    html.H4(children='Invoices loader'),
     dcc.Upload(
             id="upload-data",
             children=html.Div(
@@ -50,7 +50,9 @@ app.layout = html.Div(children=[
             multiple=True,
         ),
         html.Div(id='placeholder'),
+         html.H4(children='Invoices'),
         html.Div(id='live-update-table'),
+        html.H4(children='Invoices details'),
         html.Div(id='live-update-details'),
         dcc.Interval(
                 id='interval-component',

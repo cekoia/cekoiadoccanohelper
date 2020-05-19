@@ -5846,3 +5846,4 @@
 .env/lib/python3.8/site-packages/plotly-4.7.1.dist-info/RECORD
 .env/lib/python3.8/site-packages/plotly-4.7.1.dist-info/top_level.txt
 .env/lib/python3.8/site-packages/plotly-4.7.1.dist-info/WHEEL
+__pycache__/application.cpython-38.pyc
