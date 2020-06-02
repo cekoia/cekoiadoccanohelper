@@ -12,10 +12,6 @@ import pandas as pd
 from azure.storage.blob import BlobServiceClient
 
 UPLOAD_DIRECTORY='/tmp'
-external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
-os.environ['ACCOUNT_URI']='https://cekoiadev-cosmosdb.documents.azure.com:443/'
-os.environ['ACCOUNT_KEY']='XmbjB33akVB5uVU4R293MdibqOPLThei1XO9SymOMwNro9GchYSncAlDOsOQHsRm9GFc4HVrG2fiZGwUhxzbkA=='
-os.environ["AzureWebJobsStorage"]= "DefaultEndpointsProtocol=https;AccountName=cekoiainvoiceextractor;AccountKey=oqOQCs2PGlxt6U/AkW6TTFr44nMi5ZZmaH6uNLACxUt8Tl242f7K44RaiGLdUnvIyQGkxO8o0ACf+QbS1NDPSg==;EndpointSuffix=core.windows.net"
 
 if not os.path.exists(UPLOAD_DIRECTORY):
     os.makedirs(UPLOAD_DIRECTORY)
