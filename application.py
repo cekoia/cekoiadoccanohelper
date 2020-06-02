@@ -105,4 +105,4 @@ def update_metrics(n):
     return invoices,det
 
 if __name__ == '__main__':
-    application.run(debug=True, host='0.0.0.0', port='80')
+    application.run(debug=False, host='0.0.0.0', port='80')
