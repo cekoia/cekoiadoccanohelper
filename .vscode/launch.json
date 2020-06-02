@@ -1,0 +1,16 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python : Fichier actuel",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "env": {"ACCOUNT_URI":"https://cekoiadev-cosmosdb.documents.azure.com:443/",
+                "ACCOUNT_KEY":"XmbjB33akVB5uVU4R293MdibqOPLThei1XO9SymOMwNro9GchYSncAlDOsOQHsRm9GFc4HVrG2fiZGwUhxzbkA==",
+                "AzureWebJobsStorage":"DefaultEndpointsProtocol=https;AccountName=cekoiainvoiceextractor;AccountKey=oqOQCs2PGlxt6U/AkW6TTFr44nMi5ZZmaH6uNLACxUt8Tl242f7K44RaiGLdUnvIyQGkxO8o0ACf+QbS1NDPSg==;EndpointSuffix=core.windows.net"
+                }
+        }
+    ]
+}
