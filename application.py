@@ -2,107 +2,138 @@ import dash
 import dash_core_components as dcc
 import dash_html_components as html
 from dash.dependencies import Input, Output
+import dash_table
+
 import logging
 import pandas as pd
-from storageservice import StorageClient
-from dbservice import DbClient
+import os
+from service import *
 
-def getstyle(col, key):
-    if key==col:
-        return {'background-color':'red'}
-    else:
-        return {}
-
-dbclient=DbClient()
-storageclient=StorageClient()
-
-
-
-
+resources=['dev','qual']
+localannotationpath=""
+df=pd.DataFrame()
 app = dash.Dash(__name__)
 application = app.server
 
 app.layout = html.Div(children=[
-   html.H4(children='Select a customer'),
-   dcc.Dropdown(
-        id='customer',
-        options=[{'label': customer, 'value': customer} for customer in storageclient.findallcustomers()] , value='clientserieux'      
+   html.H4(children='Sélectionner un environnement'),
+   dcc.RadioItems(
+        id='resource',
+        options=[{'label': resource, 'value': resource} for resource in resources] , value='qual'      
     ),
-    html.H4(children='Invoices loader'),
-    dcc.Upload(
-            id="upload-data",
-            children=html.Div(
-                ["Drag and drop your pdf invoice file to convert."]
-            ),
-            style={
-                "width": "100%",
-                "height": "60px",
-                "lineHeight": "60px",
-                "borderWidth": "1px",
-                "borderStyle": "dashed",
-                "borderRadius": "5px",
-                "textAlign": "center",
-                "margin": "10px",
-            },
-            multiple=True,
+    html.H4(children='Sélectionner un projet doccano'),
+    dcc.RadioItems(
+        id='project'
+    ),
+    html.Div(id='status'),
+    html.Div([dcc.Tabs([
+        dcc.Tab(label='Enrichissement d\'annotations par recopie', children=[
+            html.P("Le traitement repère les annotations toujours identiques, telles que des adresses ou des numéros de tvas, et les annote automatiquement dans les documents nécessaires"),
+            html.Button(
+            'Lancer le traitement',
+            id='isoautocomplete',
         ),
-        html.Div(id='placeholder'),
-        html.H4(children='Invoices'),
-        html.Div(id='live-update-table'),
-        html.H4(children='Invoices details'),
-        html.Div(id='live-update-details'),
-        dcc.Interval(
-                id='interval-component',
-                interval=1*1000, # in milliseconds
-                n_intervals=0
-            )
+        html.Div(id='isoautocompletestatus'),
+        ]),
+        dcc.Tab(label='Enrichissement d\'annotations par modélisation', children=[
+            html.P("Le traitement modélise les annotations que vous avez seulement faites dans certains documents, telles que des codes tvas, et les annote automatiquement dans les documents nécessaires"),
+            html.Button(
+            'Lancer le traitement',
+            id='autocomplete',
+        ),
+        html.Div(id='autocompletestatus'),
+        ]),
+        dcc.Tab(label='Contrôles de cohérence', children=[
+            html.P("permet de repérer pour chaque label des valeurs bizarres, afin de les corriger manuellement dans doccano en se basant sur le docid"),
+            html.Div(id='outliers')
+        ]),
+        dcc.Tab(label='Statistiques de remplissage', children=[
+            html.P("..."),
+            html.Div(id='report')
+        ]),
+    ])])
 ])
 
+def generatereports(df):
+    outliers=findlocaloutliers(df)
+    reporting=report(df)
+    return dash_table.DataTable(
+    style_cell={
+        'whiteSpace': 'normal',
+        'height': 'auto',
+    },
+    columns=[{"name": i, "id": i} for i in outliers.columns],
+    data=outliers.to_dict('records'),),dash_table.DataTable(
+    style_cell={
+        'whiteSpace': 'normal',
+        'height': 'auto',
+    },
+    columns=[{"name": i, "id": i} for i in reporting.columns],
+    data=reporting.to_dict('records'),)
 
 @app.callback(
-    Output("placeholder", "children"),
-    [Input("upload-data", "filename"), Input("upload-data", "contents")],
+    Output(component_id='project', component_property='options'),
+    [Input(component_id='resource', component_property='value')]
 )
-def update_output(uploaded_filenames, uploaded_file_contents):
-    """Save uploaded files and regenerate the file list."""
+def set_projects_options(selected_resource):
+    return [{'label': name, 'value': name} for name in findallprojects(selected_resource)] 
 
-    if uploaded_filenames is not None and uploaded_file_contents is not None:
-        for name, data in zip(uploaded_filenames, uploaded_file_contents):
-            storageservice.savefile('clientserieux',name, data)
+@app.callback(
+    Output('project', 'value'),
+    [Input('project', 'options')])
+def set_cities_value(available_options):
+    return available_options[0]['value']
 
-    return [html.Li("ok")]
+@app.callback(
+    [Output(component_id='status', component_property='children'),Output(component_id='outliers', component_property='children'),Output(component_id='report', component_property='children')],
+    [Input(component_id='resource', component_property='value'),Input(component_id='project', component_property='value')]
+)
+def importannotations(resource,customer):
+    logging.info(f'resource = {resource} customer = {customer}')
+    global df
+    global localannotationpath
+    df,localannotationpath=importdoccanoannotations(resource, customer)
+    outliers,report=generatereports(df)
+    return f'imported {len(df)} annotations successfully!',outliers,report
 
-@app.callback([Output('live-update-table', 'children'),Output('live-update-details', 'children'),],
-              [Input('interval-component', 'n_intervals')])
-def update_metrics(n):
-    df=dbclient.findallinvoices()
-    controls=dbclient.findallcontrols()
-    df=df.merge(controls, how='left')
-    details=[]
-    for d in df.details.tolist():
-        details.extend(d)
-    details=pd.DataFrame(details)
-    invoices= html.Table([
-        html.Thead(
-            html.Tr([html.Th(col) for col in df.columns if col not in ['customer','details']])
-        ),
-        html.Tbody([
-            html.Tr([
-                html.Td(df.iloc[i][col], style=getstyle(col, df.iloc[i]['key'])) for col in df.columns if col not in ['customer','details']
-            ]) for i in range(len(df))
-        ])
-    ])
-    det=html.Table([
-            html.Thead(
-                html.Tr([html.Th(col) for col in details.columns] )
-            ),
-            html.Tbody([
-                html.Tr([
-                    html.Td(details.iloc[i][col]) for col in details.columns
-                ]) for i in range(len(details))
-            ])
-    ])
-    return invoices,det
+@app.callback(
+    Output(component_id='isoautocompletestatus', component_property='children'),
+    [Input(component_id='isoautocomplete', component_property='n_clicks')]
+)
+def launchisoautocomplete(n_clicks):
+    global df
+    if n_clicks!=None:
+        before = df.copy()
+        df=annotatefixedlabels(before)
+        summary=""
+        if len(df)>len(before):
+            for _,row in df.tail(n=len(df)-len(before)).iterrows():
+                summary+=row+"<br/>"
+        else:
+            summary="aucune annotation ajoutée"
+        return summary
+    else:
+        return ""
+
+@app.callback(
+    Output(component_id='autocompletestatus', component_property='children'),
+    [Input(component_id='autocomplete', component_property='n_clicks')]
+)
+def launchautocomplete(n_clicks):
+    global df
+    global localannotationpath
+    if n_clicks!=None:
+        before = df.copy()
+        df=autocompletedocs(df,localannotationpath)
+        summary=""
+        if len(df)>len(before):
+            for _,row in df.tail(n=len(df)-len(before)).iterrows():
+                summary+=row+"<br/>"
+        else:
+            summary="aucune annotation ajoutée"
+        return summary
+    else:
+        return ""
 
 if __name__ == '__main__':
-    application.run(debug=False, host='0.0.0.0', port='80')
+    application.run(debug=True)
