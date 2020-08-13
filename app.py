@@ -19,7 +19,7 @@ resource=connect_str.split(";")[1].split("=")[1].replace('cekoia','').replace('s
 localannotationpath=""
 df=pd.DataFrame()
 app = dash.Dash(__name__)
-application = app.server
+#application = app.server
 
 app.layout = html.Div(children=[
    html.H4(children=f'Environnement: {resource}'),
@@ -168,4 +168,4 @@ def generatemodel(customer,n_clicks):
         return ""
 
 if __name__ == '__main__':
-    application.run(debug=True)
+    app.run_server(debug=True, host="0.0.0.0",port=5000)
