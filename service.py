@@ -276,7 +276,7 @@ def autocompletedocs(df,localannotationpath):
 
 def findlocaloutliers(df):
   '''recherche pour chaque label les valeurs anormales'''
-  df=df.dropna()
+  df=df.dropna().reset_index(drop=True)
   
   #on vectorize les textes en remplaçant au préalable les chiffres par le caractère \d
   vectorizer = HashingVectorizer(n_features=10)
@@ -288,7 +288,6 @@ def findlocaloutliers(df):
   a=[]
   for label,group in dfa.groupby('label'):
     lof = LocalOutlierFactor()
-    print(group.drop(['docid','text','doctext','label','start','end'],1))
     group.loc[:,'anomalies']=lof.fit_predict(group.drop(['docid','text','doctext','label','start','end'],1)).copy()
     a.append(group)
   a=pd.concat(a)
@@ -325,7 +324,7 @@ def report(df):
   controls=pd.DataFrame(controls)
   return controls
 
-def train(localannotationpath,connect_str,localdir='/tmp'):
+def train(localannotationpath,connect_str,customer,localdir='/tmp'):
   #on le parse pour créer les fichiers de modélisation
   nlp = en_core_web_sm.load()
 

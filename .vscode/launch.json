@@ -3,30 +3,13 @@
     "configurations": [
         
         {
-            "name": "Python : Flask",
-            "type": "python",
-            "request": "launch",
-            "module": "flask",
-            "env": {
-                "FLASK_APP": "application.py",
-                "FLASK_ENV": "development",
-                "FLASK_DEBUG": "1"
-            },
-            "args": [
-                "run",
-            ],
-            "jinja": true
-        },
-        {
             "name": "Python : Fichier actuel",
             "type": "python",
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
             "env": {
-                "ACCOUNT_URI": "https://cekoiadev-cosmosdb.documents.azure.com:443/",
-                "ACCOUNT_KEY": "XmbjB33akVB5uVU4R293MdibqOPLThei1XO9SymOMwNro9GchYSncAlDOsOQHsRm9GFc4HVrG2fiZGwUhxzbkA==",
-                "AzureWebJobsStorage": "DefaultEndpointsProtocol=https;AccountName=cekoiainvoiceextractor;AccountKey=oqOQCs2PGlxt6U/AkW6TTFr44nMi5ZZmaH6uNLACxUt8Tl242f7K44RaiGLdUnvIyQGkxO8o0ACf+QbS1NDPSg==;EndpointSuffix=core.windows.net"
+                "AzureWebJobsStorage": "DefaultEndpointsProtocol=https;AccountName=cekoiadevstorage;AccountKey=s4HUu0JVRj2CHWUm51pOLJYNN8v20pvIPmgBkzjF1v3kwIxrww59UUQEkfhgnn3uDLmQMNgkxfGSOVq3MVxYew==;EndpointSuffix=core.windows.net"
             }
         }
     ]

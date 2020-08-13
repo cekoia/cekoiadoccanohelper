@@ -9,24 +9,39 @@ import pandas as pd
 import os
 from service import *
 
-resources=['dev','qual']
+def set_projects_options():
+    global resource
+    return [{'label': name, 'value': name} for name in findallprojects(resource)] 
+
+connect_str=os.environ['AzureWebJobsStorage']
+resource=connect_str.split(";")[1].split("=")[1].replace('cekoia','').replace('storage','')
+
 localannotationpath=""
 df=pd.DataFrame()
 app = dash.Dash(__name__)
 application = app.server
 
 app.layout = html.Div(children=[
-   html.H4(children='Sélectionner un environnement'),
-   dcc.RadioItems(
-        id='resource',
-        options=[{'label': resource, 'value': resource} for resource in resources] , value='qual'      
-    ),
+   html.H4(children=f'Environnement: {resource}'),
     html.H4(children='Sélectionner un projet doccano'),
     dcc.RadioItems(
-        id='project'
+        id='project',options=set_projects_options()
     ),
-    html.Div(id='status'),
-    html.Div([dcc.Tabs([
+    html.Button('Importer les annotations',id='import'),
+    html.Button('Exporter les annotations', id='export'),
+    html.Button('Générer le modèle', id='model'),
+    html.Div(id='importstatus'),
+    html.Div(id='exportstatus'),
+    html.Div(id='modelstatus'),
+    html.Div(id='tabs',children=[dcc.Tabs([
+        dcc.Tab(label='Contrôles de cohérence', children=[
+            html.P("permet de repérer pour chaque label des valeurs bizarres, afin de les corriger manuellement dans doccano en se basant sur le docid"),
+            html.Div(id='outliers')
+        ]),
+        dcc.Tab(label='Statistiques de remplissage', children=[
+            html.P("..."),
+            html.Div(id='report')
+        ]),
         dcc.Tab(label='Enrichissement d\'annotations par recopie', children=[
             html.P("Le traitement repère les annotations toujours identiques, telles que des adresses ou des numéros de tvas, et les annote automatiquement dans les documents nécessaires"),
             html.Button(
@@ -43,20 +58,13 @@ app.layout = html.Div(children=[
         ),
         html.Div(id='autocompletestatus'),
         ]),
-        dcc.Tab(label='Contrôles de cohérence', children=[
-            html.P("permet de repérer pour chaque label des valeurs bizarres, afin de les corriger manuellement dans doccano en se basant sur le docid"),
-            html.Div(id='outliers')
-        ]),
-        dcc.Tab(label='Statistiques de remplissage', children=[
-            html.P("..."),
-            html.Div(id='report')
-        ]),
     ])])
 ])
 
 def generatereports(df):
     outliers=findlocaloutliers(df)
     reporting=report(df)
+    reporting['docids']=reporting.docids.astype(str)
     return dash_table.DataTable(
     style_cell={
         'whiteSpace': 'normal',
@@ -71,12 +79,8 @@ def generatereports(df):
     columns=[{"name": i, "id": i} for i in reporting.columns],
     data=reporting.to_dict('records'),)
 
-@app.callback(
-    Output(component_id='project', component_property='options'),
-    [Input(component_id='resource', component_property='value')]
-)
-def set_projects_options(selected_resource):
-    return [{'label': name, 'value': name} for name in findallprojects(selected_resource)] 
+
+
 
 @app.callback(
     Output('project', 'value'),
@@ -85,16 +89,32 @@ def set_cities_value(available_options):
     return available_options[0]['value']
 
 @app.callback(
-    [Output(component_id='status', component_property='children'),Output(component_id='outliers', component_property='children'),Output(component_id='report', component_property='children')],
-    [Input(component_id='resource', component_property='value'),Input(component_id='project', component_property='value')]
+    [Output(component_id='importstatus', component_property='children'),Output(component_id='outliers', component_property='children'),Output(component_id='report', component_property='children'),Output('tabs','style')],
+    [Input(component_id='project', component_property='value'),Input('import','n_clicks')]
 )
-def importannotations(resource,customer):
-    logging.info(f'resource = {resource} customer = {customer}')
-    global df
-    global localannotationpath
-    df,localannotationpath=importdoccanoannotations(resource, customer)
-    outliers,report=generatereports(df)
-    return f'imported {len(df)} annotations successfully!',outliers,report
+def importannotations(customer,n_clicks):
+    if n_clicks!=None:
+        global df
+        global localannotationpath
+        global resource
+        df,localannotationpath=importdoccanoannotations(resource, customer)
+        outliers,report=generatereports(df)
+
+        return f'{len(df)} annotations importées depuis le projet {customer}',outliers,report,{'visibility':'visible'}
+    else:
+        return '','','',{'visibility':'hidden'}
+@app.callback(
+    Output(component_id='exportstatus', component_property='children'),
+    [Input(component_id='project', component_property='value'),Input('export','n_clicks')]
+)
+def exportannotations(customer,n_clicks):
+    if n_clicks!=None:
+        global df
+        global resource
+        exportdoccanoannotations(resource,customer,df)
+        return f'{len(df)} annotations exportées depuis le projet {customer}'
+    else:
+        return ''
 
 @app.callback(
     Output(component_id='isoautocompletestatus', component_property='children'),
@@ -132,6 +152,18 @@ def launchautocomplete(n_clicks):
         else:
             summary="aucune annotation ajoutée"
         return summary
+    else:
+        return ""
+
+@app.callback(
+    Output(component_id='modelstatus', component_property='children'),
+    [Input(component_id='project', component_property='value'),Input('model','n_clicks')]
+)
+def generatemodel(customer,n_clicks):
+    if n_clicks!=None:
+        global connect_str
+        train('annotation.jsonl',connect_str,customer,localdir='.')
+        return "modèle créé et copié sur Azure"
     else:
         return ""
 

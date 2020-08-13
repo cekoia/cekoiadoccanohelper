@@ -1,2 +1,5 @@
 .venv
-.venv/
+__pycache__
+annotation.jsonl
+outputs
+model.zip

@@ -1,4 +1,4 @@
-import requests
+import requests,os
 from urllib.parse import urljoin
 # ------------------------------------------------------------------------
 # client doccano
