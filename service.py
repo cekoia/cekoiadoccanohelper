@@ -92,12 +92,23 @@ def exportdoccanoannotations(resource,customer,df):
   doccano_client = getdoccanoclient(resource)
   #on cherche l'id projet
   projectid=findprojectidbycustomer(doccano_client, customer)
+
+  #on sauvegarde les raccourcis d'annotations
+  labels=doccano_client.get_label_list(projectid).json()
   #on le supprime et on le recrée
-  #todo : sauvegarder les annotations?
   doccano_client.delete('v1/projects/{project_id}'.format(project_id=projectid))
   projectid=findprojectidbycustomer(doccano_client, customer)
   #on envoie les nouvelles annotations
   response=doccano_client.post_doc_upload(projectid, 'json',localannotationpath)
+
+  #on recharge les raccourcis
+  labelsbad=doccano_client.get_label_list(projectid).json()
+  m=pd.DataFrame(labelsbad).merge(pd.DataFrame(labels),on='text')
+  m=m[['id_x','text','prefix_key_y','suffix_key_y','background_color_y','text_color_y']]
+  m.columns=['id','text','prefix_key','suffix_key','background_color','text_color']
+  for _,data in m.iterrows():
+    id=data["id"]
+    doccano_client.patch(f'/v1/projects/{projectid}/labels/{id}',data=dict(data))
         
 def importdoccanoannotations(resource,customer):
   '''importe les annotations depuis doccano, crée un fichier local d'annotations et renvoie les annotations en dataframes'''
