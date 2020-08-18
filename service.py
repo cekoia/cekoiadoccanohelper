@@ -1,4 +1,4 @@
-/from sklearn.neighbors import LocalOutlierFactor
+from sklearn.neighbors import LocalOutlierFactor
 from sklearn.feature_extraction.text import HashingVectorizer
 from sklearn.preprocessing import LabelEncoder
 import os
