@@ -3,3 +3,6 @@ __pycache__
 annotation.jsonl
 outputs
 model.zip
+test.json
+train.json
+annotation.jsonl

@@ -137,7 +137,7 @@ def launchisoautocomplete(n_clicks):
         summary=""
         if len(df)>len(before):
             for _,row in df.tail(n=len(df)-len(before)).iterrows():
-                summary+=row+"<br/>"
+                summary+=f'ajout automatique du label {row["label"]} dans le document {row["docid"]}\n'
         else:
             summary="aucune annotation ajoutée"
         return summary
@@ -157,7 +157,7 @@ def launchautocomplete(n_clicks):
         summary=""
         if len(df)>len(before):
             for _,row in df.tail(n=len(df)-len(before)).iterrows():
-                summary+=row+"<br/>"
+                summary+=f'ajout automatique du label {row["label"]} dans le document {row["docid"]}\n'
         else:
             summary="aucune annotation ajoutée"
         return summary

@@ -112,8 +112,7 @@ def exportdoccanoannotations(resource,customer,df):
         
 def importdoccanoannotations(resource,customer):
   '''importe les annotations depuis doccano, crée un fichier local d'annotations et renvoie les annotations en dataframes'''
-  doccano_client = DoccanoClient(
-      f'https://cekoia{resource}doccano.azurewebsites.net/',
+  doccano_client = DoccanoClient(f'https://cekoia{resource}doccano.azurewebsites.net/',
       'admin',
       'manager'
   )
@@ -139,7 +138,7 @@ def importdoccanoannotations(resource,customer):
   df=df.merge(labels, left_on='label',right_on='id').drop(['label','id'],1)
   df=df.rename(columns={'start_offset':'start','end_offset':'end','document':'docid','initialtext':'doctext','text':'label'})
   df['text']=df.apply(lambda l: l['doctext'][l['start']:l['end']],1)
-  emptydocs=pd.DataFrame([{'docid':d['id'],'doctext':d['text']} for d in docs if d['annotations'] ==[]])
+  emptydocs=pd.DataFrame([{'docid':d['id'],'doctext':d['text'],'start':0,'end':0} for d in docs if d['annotations'] ==[]])
   df=pd.concat([df,emptydocs])
   #on recalcule les identifiants de documents
   df=df.sort_values(by='docid')
@@ -205,11 +204,21 @@ def annotatefixedlabels(df,trainingids=2):
   else:
     return pd.concat([df.dropna(),pd.concat(results)])
 
+def findannotationsbydocs(df):
+  emptydocs=[]
+  for label in df.dropna().label.unique():
+    for docid in df[df.label.isna()].docid.unique():
+      emptydocs.append({'label':label,'docid':docid,'start':0})
+  emptydocs=pd.DataFrame(emptydocs)
+  annotationsbydocs=df.groupby(['label','docid']).start.count().reset_index()
+  annotationsbydocs=pd.concat([emptydocs,annotationsbydocs])
+  annotationsbydocs=annotationsbydocs.pivot_table(index='docid',columns='label').fillna(0)
+  annotationsbydocs.columns=annotationsbydocs.columns.get_level_values(1)
+  return annotationsbydocs
+
 def findanomalies(df):
   '''recherche les champs non remplis dans les documents'''
-  anomalies=df.groupby(['label','docid']).start.count().reset_index().pivot_table(index='docid',columns='label')
-  anomalies=anomalies.fillna(0)#.melt()
-  anomalies.columns=anomalies.columns.get_level_values(1)
+  anomalies=findannotationsbydocs(df)
   anomalies=anomalies.reset_index().melt(id_vars=['docid'])
   return anomalies.query('value==0')
 
@@ -226,7 +235,7 @@ def findwhattocomplete(anomalies):
   return tocomplete
 
 def autocompletedocs(df,localannotationpath):
-  localdir='.'
+  localdir='/tmp'
   predictions=[]
   anomalies=findanomalies(df)
   tocomplete=findwhattocomplete(anomalies)
@@ -253,10 +262,9 @@ def autocompletedocs(df,localannotationpath):
     srsly.write_json(localdir+"/train.json", [docs_to_json(train)])
     srsly.write_json(localdir+"/test.json", [docs_to_json(test)])
     outputdir=localdir+'/outputs'
-    try:
+    if os.path.isdir(outputdir):
         os.remove(outputdir)
-    except:
-        logging('outputdir not removed')
+    
     #on entraîne le modèle
     spacy.cli.train('en',outputdir,train_path=localdir+"/train.json",dev_path=localdir+"/test.json",pipeline='ner', n_iter=40, n_early_stopping=2,verbose=0)
 
@@ -285,7 +293,7 @@ def autocompletedocs(df,localannotationpath):
       logging.info(f'Not autocompleting {row["label"]} for doc {row["docid"]} because existing anotation found')
   docidtexts=df[['docid','doctext']].drop_duplicates()
   predictionssanschevauchement=pd.DataFrame(predictionssanschevauchement)
-  display(predictionssanschevauchement)
+  print(predictionssanschevauchement)
   return pd.concat([df,predictionssanschevauchement.merge(docidtexts)]).reset_index(drop=True)
 
 def findlocaloutliers(df):
