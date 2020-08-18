@@ -149,7 +149,7 @@ def importdoccanoannotations(resource,customer):
     group['docid']=i
     i+=1
     groups.append(group)
-  df=pd.concat(group)
+  df=pd.concat(groups)
 
   localannotationpath=createjsonlfilefromannotations(df)
   return df,localannotationpath
