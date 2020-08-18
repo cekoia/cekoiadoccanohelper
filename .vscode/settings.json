@@ -1,5 +1,5 @@
 {
-    "python.pythonPath": "/Users/anthony/dev/dash-azure/.venv/bin/python3.7",
+    "python.pythonPath": "/Users/anthony/dev/dash-azure/.venv/bin/python3.8",
     "git.ignoreLimitWarning": true,
     "python.testing.pytestArgs": [
         "."
