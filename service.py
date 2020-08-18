@@ -317,7 +317,15 @@ def findlocaloutliers(df):
 
 def report(df):
   '''recherche les annotations manquantes ou dont le nombre d'occurences diffère des autres documents'''
-  annotationsbydocs=df.groupby(['label','docid']).start.count().reset_index().pivot_table(index='docid',columns='label').fillna(0)
+  emptydocs=[]
+  for label in df.dropna().label.unique():
+    for docid in df[df.label.isna()].docid.unique():
+      emptydocs.append({'label':label,'docid':docid,'start':0})
+  emptydocs=pd.DataFrame(emptydocs)
+  annotationsbydocs=df.groupby(['label','docid']).start.count().reset_index()
+  annotationsbydocs=pd.concat([emptydocs,annotationsbydocs])
+  annotationsbydocs=annotationsbydocs.pivot_table(index='docid',columns='label').fillna(0)
+  
   controls=[]
   for c in annotationsbydocs.columns:
     #recherche d'annotations manquantes
