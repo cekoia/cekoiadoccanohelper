@@ -112,32 +112,35 @@ def exportdoccanoannotations(resource,customer,df):
         
 def importdoccanoannotations(resource,customer):
   '''importe les annotations depuis doccano, crée un fichier local d'annotations et renvoie les annotations en dataframes'''
-  doccano_client = getdoccanoclient(resource)
+  doccano_client = DoccanoClient(
+      f'https://cekoia{resource}doccano.azurewebsites.net/',
+      'admin',
+      'manager'
+  )
   projectid=findprojectidbycustomer(doccano_client, customer)
   if projectid==None:
     logging.error('projet doccano non trouvé')
-    return
+    
   first=doccano_client.get_document_list(projectid).json()
   count=first['count']
   docs=doccano_client.exp_get_doc_list(projectid,count,0).json()['results']
   for doc in docs:
     for annotation in doc['annotations']:
-      annotation['initialtext']=doc['text']
-
+        annotation['initialtext']=doc['text']
+    
   labels=doccano_client.get_label_list(projectid).json()
   label2dict={}
   for label in labels:
     label2dict[label['id']]=label['text']
   labels=pd.DataFrame(labels)
-
+  labels=labels[['id','text']]
   df=pd.concat([pd.DataFrame(doc['annotations']) for doc in docs])
-  df=df.merge(labels, left_on='label',right_on='id')
-  ids=df[df.text=='invoiceid']
-  ids=pd.DataFrame([{'document':row['document'],'invoiceid':row['initialtext'][row['start_offset']:row['end_offset']]} for index,row in ids.iterrows()])
-  df=df.merge(ids)
-  df=df[['start_offset','end_offset','document','initialtext','text']].rename(columns={'start_offset':'start','end_offset':'end','document':'docid','initialtext':'doctext','text':'label'})
+  df=df.drop(['id','prob','user'],1)
+  df=df.merge(labels, left_on='label',right_on='id').drop(['label','id'],1)
+  df=df.rename(columns={'start_offset':'start','end_offset':'end','document':'docid','initialtext':'doctext','text':'label'})
   df['text']=df.apply(lambda l: l['doctext'][l['start']:l['end']],1)
-
+  emptydocs=pd.DataFrame([{'docid':d['id'],'doctext':d['text']} for d in docs if d['annotations'] ==[]])
+  df=pd.concat([df,emptydocs])
   #on recalcule les identifiants de documents
   df=df.sort_values(by='docid')
   groups=[]
@@ -146,7 +149,7 @@ def importdoccanoannotations(resource,customer):
     group['docid']=i
     i+=1
     groups.append(group)
-  df=pd.concat(groups)
+  df=pd.concat(group)
 
   localannotationpath=createjsonlfilefromannotations(df)
   return df,localannotationpath

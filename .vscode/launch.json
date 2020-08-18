@@ -9,7 +9,7 @@
             "program": "${file}",
             "console": "integratedTerminal",
             "env": {
-                "AzureWebJobsStorage": "DefaultEndpointsProtocol=https;AccountName=cekoiadevstorage;AccountKey=s4HUu0JVRj2CHWUm51pOLJYNN8v20pvIPmgBkzjF1v3kwIxrww59UUQEkfhgnn3uDLmQMNgkxfGSOVq3MVxYew==;EndpointSuffix=core.windows.netdoc"
+                    "AzureWebJobsStorage": "DefaultEndpointsProtocol=https;AccountName=cekoiadevstorage;AccountKey=C+UIq6FR09Q3LPSj3t67+kbYXLcOYWnfjOsO7WSq9LHaBt6Sb13xpAQAU+t2NP5S2aerGTpY+itCJOemoMvgRQ==;EndpointSuffix=core.windows.net"
             }
         }
     ]

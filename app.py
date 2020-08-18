@@ -63,21 +63,30 @@ app.layout = html.Div(children=[
 
 def generatereports(df):
     outliers=findlocaloutliers(df)
+    if len(outliers)>0:
+        outliers=dash_table.DataTable(
+        style_cell={
+            'whiteSpace': 'normal',
+            'height': 'auto',
+        },
+        columns=[{"name": i, "id": i} for i in outliers.columns],
+        data=outliers.to_dict('records'),)
+    else:
+        outliers=""
     reporting=report(df)
-    reporting['docids']=reporting.docids.astype(str)
-    return dash_table.DataTable(
-    style_cell={
-        'whiteSpace': 'normal',
-        'height': 'auto',
-    },
-    columns=[{"name": i, "id": i} for i in outliers.columns],
-    data=outliers.to_dict('records'),),dash_table.DataTable(
-    style_cell={
-        'whiteSpace': 'normal',
-        'height': 'auto',
-    },
-    columns=[{"name": i, "id": i} for i in reporting.columns],
-    data=reporting.to_dict('records'),)
+    if len(reporting)>0:
+        reporting['docids']=reporting.docids.astype(str)
+        reporting=dash_table.DataTable(
+        style_cell={
+            'whiteSpace': 'normal',
+            'height': 'auto',
+        },
+        columns=[{"name": i, "id": i} for i in reporting.columns],
+        data=reporting.to_dict('records'),)
+    else:
+        reporting=""
+    return outliers,reporting
+    
 
 
 
