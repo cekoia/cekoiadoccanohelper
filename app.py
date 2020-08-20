@@ -1,23 +1,22 @@
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
-from dash.dependencies import Input, Output
+from dash.dependencies import Input, Output,State
 import dash_table
+import plotly.express as px
 
 import logging
 import pandas as pd
 import os
 from service import *
 
-def set_projects_options():
-    global resource
-    return [{'label': name, 'value': name} for name in findallprojects(resource)] 
 
 connect_str=os.environ['AzureWebJobsStorage']
 resource=connect_str.split(";")[1].split("=")[1].replace('cekoia','').replace('storage','')
-
+projects_options=[{'label': name, 'value': name} for name in findallprojects(resource)] 
 localannotationpath=""
 df=pd.DataFrame()
+
 app = dash.Dash(__name__)
 #application = app.server
 
@@ -25,14 +24,15 @@ app.layout = html.Div(children=[
    html.H4(children=f'Environnement: {resource}'),
     html.H4(children='Sélectionner un projet doccano'),
     dcc.RadioItems(
-        id='project',options=set_projects_options()
+        id='project',options=projects_options
     ),
     html.Button('Importer les annotations',id='import'),
     html.Button('Exporter les annotations', id='export'),
     html.Button('Générer le modèle', id='model'),
-    html.Div(id='importstatus'),
-    html.Div(id='exportstatus'),
-    html.Div(id='modelstatus'),
+    dcc.Loading(id="loading-1",
+            type="default",
+        children=[html.Div(id='importstatus'),html.Div(id='exportstatus'),html.Div(id='modelstatus')]),
+    dcc.Graph(id="graph"),
     html.Div(id='tabs',children=[dcc.Tabs([
         dcc.Tab(label='Contrôles de cohérence', children=[
             html.P("permet de repérer pour chaque label des valeurs bizarres, afin de les corriger manuellement dans doccano en se basant sur le docid"),
@@ -86,48 +86,42 @@ def generatereports(df):
     else:
         reporting=""
     return outliers,reporting
-    
 
-
-
-
-@app.callback(
-    Output('project', 'value'),
-    [Input('project', 'options')])
-def set_cities_value(available_options):
-    return available_options[0]['value']
+def generategraphfigure(df):
+    stats=df.docid.value_counts().reset_index().rename(columns={'docid':'annotations','index':'document'})
+    fig = px.scatter(stats, x="document", y="annotations")
+    return fig
 
 @app.callback(
-    [Output(component_id='importstatus', component_property='children'),Output(component_id='outliers', component_property='children'),Output(component_id='report', component_property='children'),Output('tabs','style')],
-    [Input(component_id='project', component_property='value'),Input('import','n_clicks')]
+    [Output('importstatus','children'),Output('outliers', 'children'),Output('report', 'children'),Output('tabs','style'),Output('graph','figure'),Output('graph','style')],
+    [Input('import','n_clicks')],
+    [State('project', 'value')]
 )
-def importannotations(customer,n_clicks):
+def importannotations(n_clicks,customer):
+    global df
+    global localannotationpath
     if n_clicks!=None:
-        global df
-        global localannotationpath
-        global resource
         df,localannotationpath=importdoccanoannotations(resource, customer)
         outliers,report=generatereports(df)
-
-        return f'{len(df)} annotations importées depuis le projet {customer}',outliers,report,{'visibility':'visible'}
+        fig=generategraphfigure(df)
+        return f'{len(df)} annotations importées depuis le projet {customer}',outliers,report,{'visibility':'visible'},fig,{'visibility':'visible'}
     else:
-        return '','','',{'visibility':'hidden'}
+        return '','','',{'visibility':'hidden'},{},{'visibility':'hidden'}
 @app.callback(
-    Output(component_id='exportstatus', component_property='children'),
-    [Input(component_id='project', component_property='value'),Input('export','n_clicks')]
+    Output('exportstatus', 'children'),
+    [Input('export','n_clicks')],
+    [State('project', 'value')]
 )
-def exportannotations(customer,n_clicks):
+def exportannotations(n_clicks,customer):
     if n_clicks!=None:
-        global df
-        global resource
         exportdoccanoannotations(resource,customer,df)
         return f'{len(df)} annotations exportées depuis le projet {customer}'
     else:
         return ''
 
 @app.callback(
-    Output(component_id='isoautocompletestatus', component_property='children'),
-    [Input(component_id='isoautocomplete', component_property='n_clicks')]
+    Output('isoautocompletestatus', 'children'),
+    [Input('isoautocomplete', 'n_clicks')]
 )
 def launchisoautocomplete(n_clicks):
     global df
@@ -136,8 +130,8 @@ def launchisoautocomplete(n_clicks):
         df=annotatefixedlabels(before)
         summary=""
         if len(df)>len(before):
-            for _,row in df.tail(n=len(df)-len(before)).iterrows():
-                summary+=f'ajout automatique du label {row["label"]} dans le document {row["docid"]}\n'
+            n=len(df)-len(before)
+            summary=f'ajout automatique de {n} annotations'
         else:
             summary="aucune annotation ajoutée"
         return summary
@@ -145,19 +139,19 @@ def launchisoautocomplete(n_clicks):
         return ""
 
 @app.callback(
-    Output(component_id='autocompletestatus', component_property='children'),
-    [Input(component_id='autocomplete', component_property='n_clicks')]
+    Output('autocompletestatus', 'children'),
+    [Input('autocomplete', 'n_clicks')]
 )
 def launchautocomplete(n_clicks):
     global df
-    global localannotationpath
     if n_clicks!=None:
         before = df.copy()
         df=autocompletedocs(df,localannotationpath)
+        
         summary=""
         if len(df)>len(before):
-            for _,row in df.tail(n=len(df)-len(before)).iterrows():
-                summary+=f'ajout automatique du label {row["label"]} dans le document {row["docid"]}\n'
+            n=len(df)-len(before)
+            summary=f'ajout automatique de {n} annotations'
         else:
             summary="aucune annotation ajoutée"
         return summary
@@ -165,13 +159,14 @@ def launchautocomplete(n_clicks):
         return ""
 
 @app.callback(
-    Output(component_id='modelstatus', component_property='children'),
-    [Input(component_id='project', component_property='value'),Input('model','n_clicks')]
+    Output('modelstatus', 'children'),
+    [Input('model','n_clicks')],
+    [State('project', 'value')]
 )
-def generatemodel(customer,n_clicks):
+def generatemodel(n_clicks,customer):
     if n_clicks!=None:
         global connect_str
-        train('annotation.jsonl',connect_str,customer,localdir='.')
+        train('annotation.jsonl',connect_str,customer,localdir='/tmp')
         return "modèle créé et copié sur Azure"
     else:
         return ""
