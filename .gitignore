@@ -6,3 +6,4 @@ model.zip
 test.json
 train.json
 annotation.jsonl
+.DS_Store
