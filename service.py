@@ -294,7 +294,6 @@ def autocompletedocs(df,localannotationpath,localdir='/tmp'):
       logging.info(f'Not autocompleting {row["label"]} for doc {row["docid"]} because existing anotation found')
   docidtexts=df[['docid','doctext']].drop_duplicates()
   predictionssanschevauchement=pd.DataFrame(predictionssanschevauchement)
-  print(predictionssanschevauchement)
   return pd.concat([df,predictionssanschevauchement.merge(docidtexts)]).reset_index(drop=True)
 
 def findlocaloutliers(df):
