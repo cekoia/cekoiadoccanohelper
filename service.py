@@ -236,8 +236,7 @@ def findwhattocomplete(anomalies):
   tocomplete['docids']=tocomplete['docids'].tolist()
   return tocomplete
 
-def autocompletedocs(df,localannotationpath):
-  localdir='.'
+def autocompletedocs(df,localannotationpath,localdir='/tmp'):
   predictions=[]
   anomalies=findanomalies(df)
   tocomplete=findwhattocomplete(anomalies)
