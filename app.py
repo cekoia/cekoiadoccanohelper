@@ -21,6 +21,7 @@ app = dash.Dash(__name__)
 #application = app.server
 
 app.layout = html.Div(children=[
+    html.H4(children='Version 1'),
    html.H4(children=f'Environnement: {resource}'),
     html.H4(children='Sélectionner un projet doccano'),
     dcc.RadioItems(
@@ -31,7 +32,7 @@ app.layout = html.Div(children=[
     html.Button('Générer le modèle', id='model'),
     dcc.Loading(id="loading-1",
             type="default",
-        children=[html.Div(id='importstatus'),html.Div(id='exportstatus'),html.Div(id='modelstatus')]),
+        children=[html.Div(id='importstatus'),html.Div(id='exportstatus'),html.Div(id='modelstatus'),html.Div(id='isoautocompletestatus'),html.Div(id='autocompletestatus')]),
     dcc.Graph(id="graph"),
     html.Div(id='tabs',children=[dcc.Tabs([
         dcc.Tab(label='Contrôles de cohérence', children=[
@@ -48,15 +49,14 @@ app.layout = html.Div(children=[
             'Lancer le traitement',
             id='isoautocomplete',
         ),
-        html.Div(id='isoautocompletestatus'),
+        
         ]),
         dcc.Tab(label='Enrichissement d\'annotations par modélisation', children=[
             html.P("Le traitement modélise les annotations que vous avez seulement faites dans certains documents, telles que des codes tvas, et les annote automatiquement dans les documents nécessaires"),
             html.Button(
             'Lancer le traitement',
             id='autocomplete',
-        ),
-        html.Div(id='autocompletestatus'),
+        )
         ]),
     ])])
 ])

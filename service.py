@@ -62,10 +62,10 @@ def findprojectidbycustomer(doccano_client, customer):
         logging.info('doccano project created successfully for customer '+customer)
         return project['id']
 
-def createjsonlfilefromannotations(df):
+def createjsonlfilefromannotations(df,localdir='/tmp'):
   '''crée le fichier local d'annotations'''
-  localannotationpath='/tmp/annotation.jsonl'
-  with jsonlines.open(localannotationpath, mode='w') as writer:
+  localannotationpath='annotation.jsonl'
+  with jsonlines.open(localdir+'/'+localannotationpath, mode='w') as writer:
     for doctext,group in df.groupby(['docid','doctext']):
       labels=[[row['start'],row['end'],row['label']] for _,row in group.iterrows()]
       writer.write({'text':doctext[1],'labels':labels})
@@ -110,7 +110,7 @@ def exportdoccanoannotations(resource,customer,df):
     id=data["id"]
     doccano_client.patch(f'/v1/projects/{projectid}/labels/{id}',data=dict(data))
         
-def importdoccanoannotations(resource,customer):
+def importdoccanoannotations(resource,customer,localdir='/tmp'):
   '''importe les annotations depuis doccano, crée un fichier local d'annotations et renvoie les annotations en dataframes'''
   doccano_client = DoccanoClient(f'https://cekoia{resource}doccano.azurewebsites.net/',
       'admin',
@@ -152,7 +152,7 @@ def importdoccanoannotations(resource,customer):
     groups.append(group)
   df=pd.concat(groups)
 
-  localannotationpath=createjsonlfilefromannotations(df)
+  localannotationpath=createjsonlfilefromannotations(df,localdir)
   return df,localannotationpath
 
 def findcandidates(text, doctext):
@@ -247,7 +247,7 @@ def autocompletedocs(df,localannotationpath,localdir='/tmp'):
     logging.info(f'autocompleting labels {targetlabels} for docids {targetdocids}')
     nlp = en_core_web_sm.load()
     docs,targetdocs = [],[]
-    with jsonlines.open(localannotationpath) as reader:
+    with jsonlines.open(localdir+'/'+localannotationpath) as reader:
       i=1
       for obj in reader:
           if i not in targetdocids:
@@ -264,7 +264,7 @@ def autocompletedocs(df,localannotationpath,localdir='/tmp'):
     srsly.write_json(localdir+"/test.json", [docs_to_json(test)])
     outputdir=localdir+'/outputs'
     if os.path.isdir(outputdir):
-        os.remove(outputdir)
+        shutil.rmtree(outputdir)
     
     #on entraîne le modèle
     spacy.cli.train('en',outputdir,train_path=localdir+"/train.json",dev_path=localdir+"/test.json",pipeline='ner', n_iter=40, n_early_stopping=2,verbose=0)
@@ -294,7 +294,6 @@ def autocompletedocs(df,localannotationpath,localdir='/tmp'):
       logging.info(f'Not autocompleting {row["label"]} for doc {row["docid"]} because existing anotation found')
   docidtexts=df[['docid','doctext']].drop_duplicates()
   predictionssanschevauchement=pd.DataFrame(predictionssanschevauchement)
-  print(predictionssanschevauchement)
   return pd.concat([df,predictionssanschevauchement.merge(docidtexts)]).reset_index(drop=True)
 
 def findlocaloutliers(df):
@@ -360,7 +359,7 @@ def train(localannotationpath,connect_str,customer,localdir='/tmp'):
   nlp = en_core_web_sm.load()
 
   docs = []
-  with jsonlines.open(localannotationpath) as reader:
+  with jsonlines.open(localdir+'/'+localannotationpath) as reader:
     for obj in reader:
         doc = nlp(obj.get('text'))
         tags = biluo_tags_from_offsets(doc, obj.get('labels'))
