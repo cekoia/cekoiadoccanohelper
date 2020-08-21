@@ -64,7 +64,7 @@ def findprojectidbycustomer(doccano_client, customer):
 
 def createjsonlfilefromannotations(df):
   '''crée le fichier local d'annotations'''
-  localannotationpath='annotation.jsonl'
+  localannotationpath='/tmp/annotation.jsonl'
   with jsonlines.open(localannotationpath, mode='w') as writer:
     for doctext,group in df.groupby(['docid','doctext']):
       labels=[[row['start'],row['end'],row['label']] for _,row in group.iterrows()]
@@ -123,18 +123,20 @@ def importdoccanoannotations(resource,customer):
   first=doccano_client.get_document_list(projectid).json()
   count=first['count']
   docs=doccano_client.exp_get_doc_list(projectid,count,0).json()['results']
+  df=[]
   for doc in docs:
     for annotation in doc['annotations']:
         annotation['initialtext']=doc['text']
-    
+        df.append(annotation)
+  df=pd.DataFrame(df)
+  df=df.drop(['id','prob','user'],1)
+  
   labels=doccano_client.get_label_list(projectid).json()
   label2dict={}
   for label in labels:
     label2dict[label['id']]=label['text']
   labels=pd.DataFrame(labels)
   labels=labels[['id','text']]
-  df=pd.concat([pd.DataFrame(doc['annotations']) for doc in docs])
-  df=df.drop(['id','prob','user'],1)
   df=df.merge(labels, left_on='label',right_on='id').drop(['label','id'],1)
   df=df.rename(columns={'start_offset':'start','end_offset':'end','document':'docid','initialtext':'doctext','text':'label'})
   df['text']=df.apply(lambda l: l['doctext'][l['start']:l['end']],1)
@@ -235,7 +237,7 @@ def findwhattocomplete(anomalies):
   return tocomplete
 
 def autocompletedocs(df,localannotationpath):
-  localdir='/tmp'
+  localdir='.'
   predictions=[]
   anomalies=findanomalies(df)
   tocomplete=findwhattocomplete(anomalies)
@@ -249,13 +251,13 @@ def autocompletedocs(df,localannotationpath):
     with jsonlines.open(localannotationpath) as reader:
       i=1
       for obj in reader:
-          doc = nlp(obj.get('text'))
-          labels=obj.get('labels')
-          fixedlabels=[label for label in labels if label[2] in targetlabels]
-          tags = biluo_tags_from_offsets(doc, fixedlabels)
-          entities = spans_from_biluo_tags(doc, tags)
-          doc.ents = entities
           if i not in targetdocids:
+            doc = nlp(obj.get('text'))
+            labels=obj.get('labels')
+            fixedlabels=[label for label in labels if label[2] in targetlabels]
+            tags = biluo_tags_from_offsets(doc, fixedlabels)
+            entities = spans_from_biluo_tags(doc, tags)
+            doc.ents = entities
             docs.append(doc)
           i+=1
     train, test = train_test_split(docs, test_size=0.3, random_state=42)
