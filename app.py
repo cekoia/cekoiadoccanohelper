@@ -18,7 +18,7 @@ localannotationpath=""
 df=pd.DataFrame()
 
 app = dash.Dash(__name__)
-#application = app.server
+server = app.server
 
 app.layout = html.Div(children=[
     html.H4(children='Version modele 1 '),
@@ -172,4 +172,4 @@ def generatemodel(n_clicks,customer):
         return ""
 
 if __name__ == '__main__':
-    app.run_server(debug=True, host="0.0.0.0",port=5000)
+    app.run_server(debug=True, host='0.0.0.0', port=8080) 

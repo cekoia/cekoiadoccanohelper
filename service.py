@@ -241,7 +241,7 @@ def autocompletedocs(df,localannotationpath,localdir='/tmp'):
   anomalies=findanomalies(df)
   tocomplete=findwhattocomplete(anomalies)
 
-  for _,row in tocomplete.head(n=1).iterrows():
+  for _,row in tocomplete.iterrows():
     targetdocids=eval(row['docids'])
     targetlabels=row['label']
     logging.info(f'autocompleting labels {targetlabels} for docids {targetdocids}')
