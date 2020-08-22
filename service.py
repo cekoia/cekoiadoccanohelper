@@ -241,7 +241,7 @@ def autocompletedocs(df,localannotationpath,localdir='/tmp'):
   anomalies=findanomalies(df)
   tocomplete=findwhattocomplete(anomalies)
 
-  for _,row in tocomplete.iterrows():
+  for _,row in tocomplete.head(n=1).iterrows():
     targetdocids=eval(row['docids'])
     targetlabels=row['label']
     logging.info(f'autocompleting labels {targetlabels} for docids {targetdocids}')
@@ -267,7 +267,7 @@ def autocompletedocs(df,localannotationpath,localdir='/tmp'):
         shutil.rmtree(outputdir)
     
     #on entraîne le modèle
-    spacy.cli.train('en',outputdir,train_path=localdir+"/train.json",dev_path=localdir+"/test.json",pipeline='ner', n_iter=40, n_early_stopping=2,verbose=0)
+    spacy.cli.train('en',outputdir,train_path=localdir+"/train.json",dev_path=localdir+"/test.json",pipeline='ner', n_iter=20, n_early_stopping=2,verbose=0)
 
     modelpath=localdir+'/outputs/model-best'#final
     nlp = spacy.blank('en')
