@@ -21,7 +21,7 @@ app = dash.Dash(__name__)
 #application = app.server
 
 app.layout = html.Div(children=[
-    html.H4(children='Version 1'),
+    html.H4(children='Version modele 1 '),
    html.H4(children=f'Environnement: {resource}'),
     html.H4(children='Sélectionner un projet doccano'),
     dcc.RadioItems(
