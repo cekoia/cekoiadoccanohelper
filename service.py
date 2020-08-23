@@ -64,8 +64,8 @@ def findprojectidbycustomer(doccano_client, customer):
 
 def createjsonlfilefromannotations(df,localdir='/tmp'):
   '''crée le fichier local d'annotations'''
-  localannotationpath='annotation.jsonl'
-  with jsonlines.open(localdir+'/'+localannotationpath, mode='w') as writer:
+  localannotationpath=localdir+'/annotation.jsonl'
+  with jsonlines.open(localannotationpath, mode='w') as writer:
     for doctext,group in df.groupby(['docid','doctext']):
       labels=[[row['start'],row['end'],row['label']] for _,row in group.iterrows()]
       writer.write({'text':doctext[1],'labels':labels})
@@ -87,6 +87,7 @@ def exportdoccanoannotations(resource,customer,df):
   '''exporte les annotations vers doccano'''
   for c in ['start','end']:
     df[c]=df[c].astype(int)
+  global localannotationpath
   localannotationpath=createjsonlfilefromannotations(df)
   
   doccano_client = getdoccanoclient(resource)
@@ -247,7 +248,7 @@ def autocompletedocs(df,localannotationpath,localdir='/tmp'):
     logging.info(f'autocompleting labels {targetlabels} for docids {targetdocids}')
     nlp = en_core_web_sm.load()
     docs,targetdocs = [],[]
-    with jsonlines.open(localdir+'/'+localannotationpath) as reader:
+    with jsonlines.open(localannotationpath) as reader:
       i=1
       for obj in reader:
           if i not in targetdocids:
@@ -359,7 +360,7 @@ def train(localannotationpath,connect_str,customer,localdir='/tmp'):
   nlp = en_core_web_sm.load()
 
   docs = []
-  with jsonlines.open(localdir+'/'+localannotationpath) as reader:
+  with jsonlines.open(localannotationpath) as reader:
     for obj in reader:
         doc = nlp(obj.get('text'))
         tags = biluo_tags_from_offsets(doc, obj.get('labels'))

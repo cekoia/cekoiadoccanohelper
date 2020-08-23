@@ -39,6 +39,6 @@
         "venv.bak{,/**}",
         ".vscode{,/**}"
     ],
-    "appService.defaultWebAppToDeploy": "/subscriptions/19daedbe-3275-41ee-9732-10896e5cce1f/resourceGroups/CekoiaAzureDev-rg/providers/Microsoft.Web/sites/cekoiadevdoccanohelper2",
-    "appService.deploySubpath": "."
+    "appService.deploySubpath": ".",
+    "appService.defaultWebAppToDeploy": "/subscriptions/19daedbe-3275-41ee-9732-10896e5cce1f/resourceGroups/CekoiaAzureDev-rg/providers/Microsoft.Web/sites/cekoiadevdoccanohelper"
 }
