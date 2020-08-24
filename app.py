@@ -32,7 +32,7 @@ app.layout = html.Div(children=[
     html.Button('Générer le modèle', id='model'),
     dcc.Loading(id="loading-1",
             type="default",
-        children=[html.Div(id='importstatus'),html.Div(id='exportstatus'),html.Div(id='modelstatus'),html.Div(id='isoautocompletestatus'),html.Div(id='autocompletestatus')]),
+        children=[html.Div(id='importstatus'),html.Div(id='modelstatus'),html.Div(id='isoautocompletestatus'),html.Div(id='autocompletestatus')]),
     dcc.Graph(id="graph"),
     html.Div(id='tabs',children=[dcc.Tabs([
         dcc.Tab(label='Contrôles de cohérence', children=[
@@ -100,12 +100,18 @@ def generategraphfigure(df):
 def importannotations(importclic,exportclic,customer):
     global df
     global localannotationpath
-    if importclic!=None:
+    ctx = dash.callback_context
+    if not ctx.triggered:
+        button_id = 'No clicks yet'
+    else:
+        button_id = ctx.triggered[0]['prop_id'].split('.')[0]
+
+    if button_id=='import':
         df,localannotationpath=importdoccanoannotations(resource, customer)
         outliers,report=generatereports(df)
         fig=generategraphfigure(df)
         return f'{len(df)} annotations importées depuis le projet {customer}',outliers,report,{'visibility':'visible'},fig,{'visibility':'visible'}
-    elif exportclic!=None:
+    elif button_id=='export':
         exportdoccanoannotations(resource,customer,df)
         outliers,report=generatereports(df)
         fig=generategraphfigure(df)
