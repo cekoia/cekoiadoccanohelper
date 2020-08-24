@@ -28,7 +28,7 @@ app.layout = html.Div(children=[
         id='project',options=projects_options
     ),
     html.Button('Importer les annotations',id='import'),
-    html.Button('Exporter les annotations', id='export'),
+    html.Button('Enregistrer', id='export'),
     html.Button('Générer le modèle', id='model'),
     dcc.Loading(id="loading-1",
             type="default",
@@ -88,8 +88,8 @@ def generatereports(df):
     return outliers,reporting
 
 def generategraphfigure(df):
-    stats=df.docid.value_counts().reset_index().rename(columns={'docid':'annotations','index':'document'})
-    fig = px.scatter(stats, x="document", y="annotations")
+    stats=df.groupby(['docid','label']).start.count().reset_index().rename(columns={'start':'annotations'})
+    fig = px.bar(stats, x="docid", y="annotations", color="label", title="Annotations par documents")
     return fig
 
 @app.callback(
@@ -115,9 +115,11 @@ def importannotations(n_clicks,customer):
 def exportannotations(n_clicks,customer):
     if n_clicks!=None:
         exportdoccanoannotations(resource,customer,df)
-        return f'{len(df)} annotations exportées depuis le projet {customer}'
+        outliers,report=generatereports(df)
+        fig=generategraphfigure(df)
+        return f'{len(df)} annotations exportées depuis le projet {customer}',outliers,report,{'visibility':'visible'},fig,{'visibility':'visible'}
     else:
-        return ''
+        return '','','',{'visibility':'hidden'},{},{'visibility':'hidden'}
 
 @app.callback(
     Output('isoautocompletestatus', 'children'),
