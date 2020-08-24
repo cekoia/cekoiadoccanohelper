@@ -94,26 +94,18 @@ def generategraphfigure(df):
 
 @app.callback(
     [Output('importstatus','children'),Output('outliers', 'children'),Output('report', 'children'),Output('tabs','style'),Output('graph','figure'),Output('graph','style')],
-    [Input('import','n_clicks')],
+    [Input('import','n_clicks'),Input('export','n_clicks')],
     [State('project', 'value')]
 )
-def importannotations(n_clicks,customer):
+def importannotations(importclic,exportclic,customer):
     global df
     global localannotationpath
-    if n_clicks!=None:
+    if importclic!=None:
         df,localannotationpath=importdoccanoannotations(resource, customer)
         outliers,report=generatereports(df)
         fig=generategraphfigure(df)
         return f'{len(df)} annotations importées depuis le projet {customer}',outliers,report,{'visibility':'visible'},fig,{'visibility':'visible'}
-    else:
-        return '','','',{'visibility':'hidden'},{},{'visibility':'hidden'}
-@app.callback(
-    Output('exportstatus', 'children'),
-    [Input('export','n_clicks')],
-    [State('project', 'value')]
-)
-def exportannotations(n_clicks,customer):
-    if n_clicks!=None:
+    elif exportclic!=None:
         exportdoccanoannotations(resource,customer,df)
         outliers,report=generatereports(df)
         fig=generategraphfigure(df)
