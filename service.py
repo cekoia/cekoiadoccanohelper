@@ -18,6 +18,8 @@ from azure.storage.blob import BlobServiceClient
 import logging
 import en_core_web_sm
 from doccano_api_client import DoccanoClient
+import dateparser
+from pycaret.anomaly import *
 
 def uploadtoazure(localpath, remotedir, connect_str):
   """
@@ -379,3 +381,151 @@ def train(localannotationpath,connect_str,customer,localdir='/tmp'):
   zippath=localdir+'/model'
   shutil.make_archive(zippath, 'zip', modelpath)
   uploadtoazure(zippath+'.zip', f'customers/{customer}',connect_str)
+
+def extractlist(dfvariable):
+  dfvariable.reset_index(drop=True,inplace=True)
+  vc=dfvariable.label.value_counts().reset_index().label.value_counts()
+  numberofproducts=vc[vc==vc.max()].index.max()
+  print(numberofproducts)
+  medians=dfvariable.label.value_counts().reset_index()
+  medians.columns=['label','median']
+  medians['median']=(medians['median']==numberofproducts)
+  dfvariable=dfvariable.reset_index().merge(medians).set_index('index').sort_index()
+  seen=[]
+  elements=[]
+  currentelement={}
+  for _,row in dfvariable.iterrows():
+    label=row['label']
+    text=row['text']
+    if row['median']==True:
+      #nouvelle ligne
+      if label in seen:
+          elements.append(currentelement)
+          currentelement={}
+          seen=[label]
+      else:
+        seen.append(label)
+      #nouvelle propriété
+      currentelement[label]=text
+    else:
+      if label in currentelement:
+        currentelement[label]=currentelement[label]+' '+text
+      else:
+        currentelement[label]=text
+  if len(currentelement.keys())>0:
+    elements.append(currentelement)
+  return elements
+
+def todocument(df):
+  result={}
+  filtervariablefields=df.label.str.contains(' ')
+  #on isole les champs uniques
+  dfunique=df[~filtervariablefields]
+  #on concatène les champs identiques (par exemple les adresses)
+  dfunique=dfunique.groupby('label').text.apply(lambda l: ' '.join(l)).reset_index()
+  for _,row in dfunique.iterrows():
+    result[row['label']]=row['text']
+  #on détecte les listes
+  dfvariable=df[filtervariablefields]
+  listkeys=dfvariable.label.str.split(' ',expand=True).iloc[:,0].unique()
+  for listkey in listkeys:
+    listvalues=dfvariable[dfvariable.label.str.startswith(listkey)]
+    listvalues['label']=listvalues['label'].str.replace(listkey+' ','')
+    result[listkey]=extractlist(listvalues)
+  return result
+
+def cleanresult(key,value):
+  if 'date' in key:
+    try:
+      return dateparser.parse(value).strftime('%Y-%m-%d')
+    except:
+      logging.info(f'impossible to parse {key} {value}')
+  #on nettoie les prix généraux
+  elif 'amount' in key:
+    try:
+      pricesplit=re.findall('[-,\.\d]',value)
+      separatorfound=False
+      finalprice=""
+      for char in reversed(pricesplit):
+        if (char in ".,") & (separatorfound==False):
+          separatorfound=True
+          finalprice="."+finalprice
+        elif char.isdigit():
+          finalprice=char+finalprice
+      if pricesplit[0]=='-':
+        finalprice="-"+finalprice
+      return float(finalprice)
+    except:
+      logging.info(f'impossible to parse {key} {value}')
+  return value
+
+def cleandocument(result):  
+  #on vérifie que l'objet n'est pas nul   
+  if result is None:
+    return result
+
+  for key in result.keys():
+    #on nettoie les listes
+    if isinstance(result[key],list):
+      for i in range(len(result[key])):
+        if result[key][i] is not None:
+          for subkey in result[key][i].keys():
+            result[key][i][subkey]=cleanresult(subkey,result[key][i][subkey])
+    #et les valeurs uniques
+    else:
+      result[key]=cleanresult(key,result[key])
+  return result
+
+def postprocess(df,customer,filename):  
+  #on extrait les détails de facturation
+  result=todocument(df)
+  #on nettoie les champs
+  result=cleandocument(result)
+  #on ajoute le client en clé
+  result['customer']=customer
+  result['filename']=filename
+  return result
+
+def anomalytrain(df,customer,connect_str,localdir='/tmp'):
+    """
+    crée les modèles d'anomalies en s'inspirant des annotations dans doccano
+    @df: liste des annotations
+    @customer: client
+    @connect_str: chaîne de connexion au storage azure
+    @localdir: répertoire local de génération des fichiers
+    """
+    #on transforme les annotations en documents
+    df=df.sort_values(by=['docid','start'])[['docid','label','text']].copy()
+
+    documents=[]
+    for filename,group in df.groupby('docid'):
+        documents.append(postprocess(group.drop('docid',1),customer,filename))
+
+    #on repère alors les valeurs uniques et les valeurs sous forme de tableaux
+    uniquedocs=[]
+    variabledocs={}
+    for document in documents:
+      listkeys=[key for key in document.keys() if isinstance(document[key], list)]
+      uniquedocs.append(dict((k, document[k]) for k in document.keys() if (k not in listkeys) & (k not in ['customer','filename'])))
+      for key in listkeys:
+          v=pd.DataFrame(document[key])
+          if key in variabledocs: 
+            variabledocs[key].append(v)
+          else:
+            variabledocs[key]=[v]
+    uniquedocs=pd.DataFrame(uniquedocs)
+    for key in variabledocs.keys():
+      variabledocs[key]=pd.concat(variabledocs[key])
+
+    #on génère alors des modèles de détection d'anomalies, un par tableau et un pour les valeurs uniques
+    setup(uniquedocs.fillna(-1), silent=True)
+    model=create_model('lof')
+    localpath=localdir+'/anomaly'
+    save_model(model, localpath)
+    uploadtoazure(localpath,'customers/'+customer,connect_str)
+    for key in variabledocs.keys():
+        s=setup(variabledocs[key].fillna(-1), silent=True)
+        model=create_model('lof')
+        localpath=localdir+'/anomaly'+key
+        save_model(model, localpath)
+        uploadtoazure(localpath,'customers/'+customer,connect_str)

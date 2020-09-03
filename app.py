@@ -29,7 +29,9 @@ app.layout = html.Div(children=[
     ),
     html.Button('Importer les annotations',id='import'),
     html.Button('Enregistrer', id='export'),
-    html.Button('Générer le modèle', id='model'),
+    html.Button('Générer le modèle d\'extraction', id='model'),
+    html.Button('Générer le modèle de détection d\'anomalies', id='anomaly'),
+
     dcc.Loading(id="loading-1",
             type="default",
         children=[html.Div(id='importstatus'),html.Div(id='modelstatus'),html.Div(id='isoautocompletestatus'),html.Div(id='autocompletestatus')]),
@@ -94,12 +96,14 @@ def generategraphfigure(df):
 
 @app.callback(
     [Output('importstatus','children'),Output('outliers', 'children'),Output('report', 'children'),Output('tabs','style'),Output('graph','figure'),Output('graph','style')],
-    [Input('import','n_clicks'),Input('export','n_clicks')],
+    [Input('import','n_clicks'),Input('export','n_clicks'),Input('model','n_clics')],
     [State('project', 'value')]
 )
-def importannotations(importclic,exportclic,customer):
+def importannotations(importclic,exportclic,modelclic,customer):
     global df
     global localannotationpath
+    global connect_str
+
     ctx = dash.callback_context
     if not ctx.triggered:
         button_id = 'No clicks yet'
@@ -116,6 +120,16 @@ def importannotations(importclic,exportclic,customer):
         outliers,report=generatereports(df)
         fig=generategraphfigure(df)
         return f'{len(df)} annotations exportées depuis le projet {customer}',outliers,report,{'visibility':'visible'},fig,{'visibility':'visible'}
+    elif button_id=='model':
+        train('annotation.jsonl',connect_str,customer,localdir='/tmp')
+        outliers,report=generatereports(df)
+        fig=generategraphfigure(df)
+        return f'modèle créé',outliers,report,{'visibility':'visible'},fig,{'visibility':'visible'}
+    elif button_id=='anomaly':
+        anomalytrain(df,customer,connect_str,localdir='/tmp')
+        outliers,report=generatereports(df)
+        fig=generategraphfigure(df)
+        return f'modèle de détection d\'anomalies créé',outliers,report,{'visibility':'visible'},fig,{'visibility':'visible'}
     else:
         return '','','',{'visibility':'hidden'},{},{'visibility':'hidden'}
 
@@ -158,18 +172,6 @@ def launchautocomplete(n_clicks):
     else:
         return ""
 
-@app.callback(
-    Output('modelstatus', 'children'),
-    [Input('model','n_clicks')],
-    [State('project', 'value')]
-)
-def generatemodel(n_clicks,customer):
-    if n_clicks!=None:
-        global connect_str
-        train('annotation.jsonl',connect_str,customer,localdir='/tmp')
-        return "modèle créé et copié sur Azure"
-    else:
-        return ""
 
 if __name__ == '__main__':
     app.run_server(debug=True, host='0.0.0.0', port=8080) 
