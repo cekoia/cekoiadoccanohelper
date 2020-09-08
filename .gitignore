@@ -7,3 +7,5 @@ test.json
 train.json
 annotation.jsonl
 .DS_Store
+logs.log
+mlruns/0/meta.yaml

@@ -386,7 +386,6 @@ def extractlist(dfvariable):
   dfvariable.reset_index(drop=True,inplace=True)
   vc=dfvariable.label.value_counts().reset_index().label.value_counts()
   numberofproducts=vc[vc==vc.max()].index.max()
-  print(numberofproducts)
   medians=dfvariable.label.value_counts().reset_index()
   medians.columns=['label','median']
   medians['median']=(medians['median']==numberofproducts)
@@ -515,17 +514,17 @@ def anomalytrain(df,customer,connect_str,localdir='/tmp'):
             variabledocs[key]=[v]
     uniquedocs=pd.DataFrame(uniquedocs)
     for key in variabledocs.keys():
-      variabledocs[key]=pd.concat(variabledocs[key])
+      variabledocs[key]=pd.concat(variabledocs[key]).reset_index(drop=True)
 
     #on génère alors des modèles de détection d'anomalies, un par tableau et un pour les valeurs uniques
     setup(uniquedocs.fillna(-1), silent=True)
     model=create_model('lof')
     localpath=localdir+'/anomaly'
     save_model(model, localpath)
-    uploadtoazure(localpath,'customers/'+customer,connect_str)
+    uploadtoazure(localpath+'.pkl','customers/'+customer,connect_str)
     for key in variabledocs.keys():
         s=setup(variabledocs[key].fillna(-1), silent=True)
         model=create_model('lof')
         localpath=localdir+'/anomaly'+key
         save_model(model, localpath)
-        uploadtoazure(localpath,'customers/'+customer,connect_str)
+        uploadtoazure(localpath+'.pkl','customers/'+customer,connect_str)

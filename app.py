@@ -34,7 +34,7 @@ app.layout = html.Div(children=[
 
     dcc.Loading(id="loading-1",
             type="default",
-        children=[html.Div(id='importstatus'),html.Div(id='modelstatus'),html.Div(id='isoautocompletestatus'),html.Div(id='autocompletestatus')]),
+        children=[html.Div(id='importstatus'),html.Div(id='isoautocompletestatus'),html.Div(id='autocompletestatus')]),
     dcc.Graph(id="graph"),
     html.Div(id='tabs',children=[dcc.Tabs([
         dcc.Tab(label='Contrôles de cohérence', children=[
@@ -96,10 +96,10 @@ def generategraphfigure(df):
 
 @app.callback(
     [Output('importstatus','children'),Output('outliers', 'children'),Output('report', 'children'),Output('tabs','style'),Output('graph','figure'),Output('graph','style')],
-    [Input('import','n_clicks'),Input('export','n_clicks'),Input('model','n_clics')],
+    [Input('import','n_clicks'),Input('export','n_clicks'),Input('model','n_clicks'),Input('anomaly','n_clicks')],
     [State('project', 'value')]
 )
-def importannotations(importclic,exportclic,modelclic,customer):
+def importannotations(importclic,exportclic,modelclic,anomalyclic,customer):
     global df
     global localannotationpath
     global connect_str
