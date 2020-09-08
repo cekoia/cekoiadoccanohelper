@@ -522,9 +522,15 @@ def anomalytrain(df,customer,connect_str,localdir='/tmp'):
     localpath=localdir+'/anomaly'
     save_model(model, localpath)
     uploadtoazure(localpath+'.pkl','customers/'+customer,connect_str)
+    localpath=localdir+'/anomaly.csv'
+    uniquedocs.to_csv(localpath, index=False)
+    uploadtoazure(localpath,'customers/'+customer,connect_str)
     for key in variabledocs.keys():
         s=setup(variabledocs[key].fillna(-1), silent=True)
         model=create_model('lof')
         localpath=localdir+'/anomaly'+key
         save_model(model, localpath)
         uploadtoazure(localpath+'.pkl','customers/'+customer,connect_str)
+        localpath=localdir+'/anomaly'+key+'.csv'
+        variabledocs[key].to_csv(localpath,index=False)
+        uploadtoazure(localpath,'customers/'+customer,connect_str)
