@@ -361,7 +361,7 @@ def train(localannotationpath,connect_str,customer,localdir='/tmp'):
   nlp = en_core_web_sm.load()
 
   docs = []
-  with jsonlines.open(localannotationpath) as reader:
+  with jsonlines.open(localdir+'/'+localannotationpath) as reader:
     for obj in reader:
         doc = nlp(obj.get('text'))
         tags = biluo_tags_from_offsets(doc, obj.get('labels'))
