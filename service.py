@@ -19,7 +19,6 @@ import logging
 import en_core_web_sm
 from doccano_api_client import DoccanoClient
 import dateparser
-from pycaret.anomaly import *
 
 def uploadtoazure(localpath, remotedir, connect_str):
   """
@@ -517,20 +516,10 @@ def anomalytrain(df,customer,connect_str,localdir='/tmp'):
       variabledocs[key]=pd.concat(variabledocs[key]).reset_index(drop=True)
 
     #on génère alors des modèles de détection d'anomalies, un par tableau et un pour les valeurs uniques
-    setup(uniquedocs.fillna(-1), silent=True)
-    model=create_model('lof')
-    localpath=localdir+'/anomaly'
-    save_model(model, localpath)
-    uploadtoazure(localpath+'.pkl','customers/'+customer,connect_str)
     localpath=localdir+'/anomaly.csv'
     uniquedocs.to_csv(localpath, index=False)
     uploadtoazure(localpath,'customers/'+customer,connect_str)
     for key in variabledocs.keys():
-        s=setup(variabledocs[key].fillna(-1), silent=True)
-        model=create_model('lof')
-        localpath=localdir+'/anomaly'+key
-        save_model(model, localpath)
-        uploadtoazure(localpath+'.pkl','customers/'+customer,connect_str)
         localpath=localdir+'/anomaly'+key+'.csv'
         variabledocs[key].to_csv(localpath,index=False)
         uploadtoazure(localpath,'customers/'+customer,connect_str)
