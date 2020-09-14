@@ -114,7 +114,6 @@ prompt-toolkit==3.0.7
 protobuf==3.13.0
 ptyprocess==0.6.0
 py==1.8.1
-pycaret==2.1.2
 pycparser==2.20
 Pygments==2.6.1
 pyLDAvis==2.1.2
