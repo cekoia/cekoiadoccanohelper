@@ -131,7 +131,7 @@ def importdoccanoannotations(resource,customer,localdir='/tmp'):
         annotation['initialtext']=doc['text']
         df.append(annotation)
   df=pd.DataFrame(df)
-  df=df.drop(['id','prob','user'],1)
+  df=df.drop(['id','prob','user','created_at','updated_at'],1)
   
   labels=doccano_client.get_label_list(projectid).json()
   label2dict={}
@@ -307,16 +307,17 @@ def findlocaloutliers(df):
   formattedtext=df.text.astype(str).str.replace('\d+','0')
   patterns=vectorizer.fit_transform(formattedtext).toarray()
   dfa=pd.concat([df,pd.DataFrame(patterns)],1)
-  
   #on parcourt chaque label en exécutant une recherche locale d'anomalies
   a=[]
   for label,group in dfa.groupby('label'):
-    lof = LocalOutlierFactor()
-    group.loc[:,'anomalies']=lof.fit_predict(group.drop(['docid','text','doctext','label','start','end'],1)).copy()
-    a.append(group)
+    try:
+      lof = LocalOutlierFactor()
+      group.loc[:,'anomalies']=lof.fit_predict(group.drop(['docid','text','doctext','label','start','end'],1)).copy()
+      a.append(group)
+    except:
+      print(f'error {label}')
   a=pd.concat(a)
   a=a[a.anomalies==-1]
-  a=a[['docid','start','end','label','text']]
 
   #on calcule les valeurs habituellement données au label
   texts=df.groupby(['label','text']).docid.count().reset_index()
