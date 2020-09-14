@@ -318,13 +318,12 @@ def findlocaloutliers(df):
       print(f'error {label}')
   a=pd.concat(a)
   a=a[a.anomalies==-1]
-
   #on calcule les valeurs habituellement données au label
   texts=df.groupby(['label','text']).docid.count().reset_index()
   mostcommontextsbylabel=texts.groupby(['label']).docid.max().reset_index().merge(texts).drop_duplicates(subset='label').drop('docid',1)
   mostcommontextsbylabel=mostcommontextsbylabel.rename(columns={'text':'most common value'})
   #on renvoie les anomalies trouvées adossées aux valeurs habituellement données
-  return a.merge(mostcommontextsbylabel)
+  return a.merge(mostcommontextsbylabel)[['docid','label','text','most common value']]
 
 def report(df):
   '''recherche les annotations manquantes ou dont le nombre d'occurences diffère des autres documents'''
