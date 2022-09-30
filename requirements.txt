@@ -29,7 +29,7 @@ iniconfig==1.0.1
 isodate==0.6.0
 itsdangerous==1.1.0
 Jinja2==2.11.2
-joblib==0.16.0
+joblib==1.2.0
 jsonlines==1.2.0
 MarkupSafe==1.1.1
 more-itertools==8.3.0
